@@ -1,8 +1,13 @@
 DerivedData/
 build/
 *.xcresult
+*.xcarchive
 build.log
 test.log
+device-build.log
+# Sideload packaging leftovers; the .ipa itself belongs in CI artifacts only.
+Payload/
+*.ipa
 Generated/
 *.xcodeproj
 xcuserdata/

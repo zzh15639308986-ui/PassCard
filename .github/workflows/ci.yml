@@ -148,3 +148,79 @@ jobs:
             exit 1
           fi
           echo "clean: no key file, no key-shaped string, no real-screenshot data"
+
+  sideload-ipa:
+    # There is no Mac in this project, so an .ipa has to come out of CI. It is
+    # deliberately UNSIGNED: Sideloadly/AltStore re-sign it on Windows with the
+    # user's own free Apple ID. Signing here would need a paid certificate and
+    # a provisioning profile stored as secrets, which this route avoids.
+    runs-on: macos-15
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Select newest Xcode
+        run: |
+          XCODE=$(ls -d /Applications/Xcode*.app 2>/dev/null | sort -V | tail -1)
+          sudo xcode-select -s "$XCODE/Contents/Developer"
+          sudo xcodebuild -runFirstLaunch || true
+          xcodebuild -version
+
+      - name: Install XcodeGen
+        run: |
+          if ! command -v xcodegen >/dev/null 2>&1; then
+            brew install xcodegen
+          fi
+          xcodegen generate
+
+      # A device build, not a simulator build: the simulator slice cannot be
+      # installed on an iPhone. Signing is switched off at every level because
+      # there is no identity on the runner to sign with.
+      - name: Build for device without signing
+        run: |
+          set -o pipefail
+          xcodebuild build \
+            -project PassCard.xcodeproj \
+            -scheme PassCard \
+            -configuration Release \
+            -destination "generic/platform=iOS" \
+            -derivedDataPath DerivedData \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGN_IDENTITY="" \
+            2>&1 | tee device-build.log
+
+      - name: Assemble the .ipa
+        run: |
+          set -e
+          APP=$(find DerivedData/Build/Products -maxdepth 2 -name "PassCard.app" | head -1)
+          if [ -z "$APP" ]; then
+            echo "no PassCard.app in the device build output" >&2
+            find DerivedData/Build/Products -maxdepth 2 >&2
+            exit 1
+          fi
+          echo "packing $APP"
+          mkdir -p Payload
+          cp -R "$APP" Payload/
+          # ditto rather than zip: it preserves the bundle's symlinks and
+          # resource forks, which a plain zip flattens and iOS then rejects.
+          ditto -c -k --sequesterRsrc --keepParent Payload PassCard-unsigned.ipa
+          ls -lh PassCard-unsigned.ipa
+          unzip -l PassCard-unsigned.ipa | head -20
+
+      - name: Upload the .ipa
+        uses: actions/upload-artifact@v4
+        with:
+          name: PassCard-unsigned-ipa
+          path: PassCard-unsigned.ipa
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Upload logs on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: device-build-logs
+          path: device-build.log
+          if-no-files-found: ignore
+          retention-days: 14

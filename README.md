@@ -7,7 +7,8 @@
 
 ```
 project.yml  Sources/  Widget/  Tests/   iOS 客户端（工程由 XcodeGen 生成）
-.github/workflows/ci.yml                 两个 job：macOS 编译测试、ubuntu 后端测试
+.github/workflows/ci.yml                 三个 job：macOS 编译测试、ubuntu 后端测试、
+                                         macOS 产出可侧载的未签名 .ipa
 backend/                                 识别后端 + 合成截图评测
 ```
 
@@ -101,20 +102,42 @@ token。Seed 2.1 默认开推理，而且把推理算进输出 token 计费，�
 1. 在电脑上启动后端（需要 `ARK_API_KEY` 和 `ARK_MODEL` 环境变量）：
    ```bash
    cd backend
-   python server.py        # 监听 127.0.0.1:8787
+   py server.py --host 0.0.0.0
    ```
-   `server.py` 默认只绑 `127.0.0.1`，手机连不上。改成 `0.0.0.0` 或在
-   `ThreadingHTTPServer(("0.0.0.0", port), Handler)` 处修改，然后放行 Windows
-   防火墙的入站端口。
+   不加 `--host` 就只绑 `127.0.0.1`，手机连不上。加了之后启动横幅会直接打印手机
+   该填的地址（例如 `http://192.168.160.41:8787`），以及 Windows 防火墙的放行
+   命令——**那条 `netsh` 要在管理员权限的终端里跑一次**，不然手机连不上。
+   这个端口没有任何鉴权，每个请求都在花你的 Ark 额度，用完就 Ctrl+C 关掉。
 
-2. 查这台电脑的局域网 IP：`ipconfig` → IPv4 地址，例如 `192.168.1.20`。
+2. 手机和电脑连同一个 Wi-Fi，App → 设置 → 后端地址填横幅打印的那个地址 →
+   点「测试连接」。显示模型名就是通了。
 
-3. 真机装 App（需要 Apple Developer 账号签名），手机和电脑连同一个 Wi-Fi，
-   App → 设置 → 后端地址填 `http://192.168.1.20:8787` → 点「测试连接」。
-   显示模型名就是通了。
-
-4. 点右上角加号选截图。**灵动岛只能在真机上验证，模拟器不渲染灵动岛**；锁屏
+3. 点右上角加号选截图。**灵动岛只能在真机上验证，模拟器不渲染灵动岛**；锁屏
    Live Activity 在模拟器上可以看到。
+
+## 装到 iPhone（没有 Mac）
+
+CI 的 `sideload-ipa` job 产出一个**未签名**的 `.ipa`，用 Windows 上的侧载工具配
+你自己的免费 Apple ID 签名安装。
+
+1. 仓库 Actions → 最近一次成功的运行 → 页面最下方 Artifacts → 下载
+   `PassCard-unsigned-ipa`（保留 30 天），解压得到 `PassCard-unsigned.ipa`。
+2. 装 Sideloadly 或 AltStore。**这两个都是第三方工具，我不会替你下载或运行**，
+   你自己从官网装。
+3. iPhone 用数据线连电脑，在 Sideloadly 里选这个 `.ipa`，Apple ID 填你自己的
+   （免费账号就行，不需要 99 美元的开发者账号），点 Start。
+4. 手机上第一次打开前，去「设置 → 通用 → VPN 与设备管理」信任你自己的
+   开发者证书。
+
+已知限制：
+
+- 免费 Apple ID 签的名 **7 天过期**，到期 App 打不开，重跑一次侧载即可。
+- 免费账号同时最多装 3 个侧载 App。
+- 这个 App 带 Widget Extension（灵动岛和锁屏卡片就是它画的），**免费个人签名
+  能不能带上扩展我没有验证过**。如果侧载报错、或者装上了但没有灵动岛，说一声，
+  我给 CI 加一个不含扩展的变体，先把主流程跑通。
+- Bundle ID 还是 `com.example.PassCard`，侧载工具一般会让你改成自己的；改了不影响
+  功能，但两次安装的 App 不共享数据。
 
 ## 上架前必须改
 
