@@ -27,7 +27,7 @@ enum LiveActivityController {
         let state = PassActivityAttributes.ContentState(pass)
         _ = try Activity<PassActivityAttributes>.request(
             attributes: attributes,
-            contentState: state,
+            content: ActivityContent(state: state, staleDate: nil),
             pushType: nil)
     }
 

@@ -116,10 +116,26 @@ final class PassStore: ObservableObject {
 
     // MARK: - Persistence
 
+    /// Encoder and decoder must agree on the date strategy. A mismatch makes the
+    /// stored file undecodable on the next launch, and load() reads that as
+    /// corruption and throws the user's passes away.
+    static func makeEncoder() -> JSONEncoder {
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
+        encoder.dateEncodingStrategy = .iso8601
+        return encoder
+    }
+
+    static func makeDecoder() -> JSONDecoder {
+        let decoder = JSONDecoder()
+        decoder.dateDecodingStrategy = .iso8601
+        return decoder
+    }
+
     private func load() {
         guard let data = try? Data(contentsOf: fileURL) else { return }
         do {
-            passes = try JSONDecoder().decode([Pass].self, from: data)
+            passes = try Self.makeDecoder().decode([Pass].self, from: data)
         } catch {
             // A corrupt store must not brick the app; keep the file for autopsy
             // and start empty.
@@ -132,10 +148,7 @@ final class PassStore: ObservableObject {
 
     private func save() {
         do {
-            let encoder = JSONEncoder()
-            encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
-            encoder.dateEncodingStrategy = .iso8601
-            let data = try encoder.encode(passes)
+            let data = try Self.makeEncoder().encode(passes)
             try data.write(to: fileURL, options: .atomic)
         } catch {
             lastError = "保存失败：\(error.localizedDescription)"

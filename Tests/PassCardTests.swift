@@ -144,11 +144,11 @@ final class PassCardTests: XCTestCase {
         let date = PassDateParser.parse("2026-11-28T14:30:00")
         XCTAssertNotNil(date)
         let calendar = Calendar.current
-        XCTAssertEqual(calendar?.component(.year, from: date!), 2026)
-        XCTAssertEqual(calendar?.component(.month, from: date!), 11)
-        XCTAssertEqual(calendar?.component(.day, from: date!), 28)
-        XCTAssertEqual(calendar?.component(.hour, from: date!), 14)
-        XCTAssertEqual(calendar?.component(.minute, from: date!), 30)
+        XCTAssertEqual(calendar.component(.year, from: date!), 2026)
+        XCTAssertEqual(calendar.component(.month, from: date!), 11)
+        XCTAssertEqual(calendar.component(.day, from: date!), 28)
+        XCTAssertEqual(calendar.component(.hour, from: date!), 14)
+        XCTAssertEqual(calendar.component(.minute, from: date!), 30)
     }
 
     func testParsesOffsetAndFractionalIsoformat() {
@@ -332,15 +332,37 @@ final class PassCardTests: XCTestCase {
     func testPassCodableRoundTrip() throws {
         let original = try makePass("flight", #"{"flight_no":"MU5137","depart_at":"2099-06-01T09:00:00"}"#)
 
-        let encoder = JSONEncoder()
-        encoder.dateEncodingStrategy = .iso8601
-        let data = try encoder.encode(original)
-        let decoder = JSONDecoder()
-        decoder.dateEncodingStrategy = .iso8601
-        let restored = try decoder.decode(Pass.self, from: data)
+        let data = try PassStore.makeEncoder().encode(original)
+        let restored = try PassStore.makeDecoder().decode(Pass.self, from: data)
 
         XCTAssertEqual(restored, original)
         XCTAssertEqual(restored.fields.text("flight_no"), "MU5137")
+    }
+
+    /// The store's encoder writes ISO-8601 dates. If its decoder ever drifts back
+    /// to the default strategy the file becomes unreadable on the next launch and
+    /// load() discards it as corrupt, so pin both ends together here.
+    func testStoredFileDecodesWithTheStoresOwnDecoder() throws {
+        let passes = [
+            try makePass("train", #"{"train_no":"G1"}"#),
+            try makePass("pickup_food", #"{"code":"A100"}"#),
+        ]
+        let data = try PassStore.makeEncoder().encode(passes)
+        XCTAssertTrue(String(decoding: data, as: UTF8.self).contains("createdAt"))
+
+        let restored = try PassStore.makeDecoder().decode([Pass].self, from: data)
+        XCTAssertEqual(restored, passes)
+        XCTAssertEqual(restored.map(\.type), [.train, .pickupFood])
+    }
+
+    func testCompletedAtSurvivesARoundTrip() throws {
+        var pass = try makePass("voucher", #"{"code":"V1"}"#)
+        pass.markCompleted(at: Self.storedDate)
+        let data = try PassStore.makeEncoder().encode(pass)
+        let restored = try PassStore.makeDecoder().decode(Pass.self, from: data)
+        XCTAssertEqual(restored.completedAt, Self.storedDate)
+        XCTAssertTrue(restored.isCompleted)
+        XCTAssertFalse(restored.isPinned)
     }
 
     func testPassDecodesFromStoredFieldsWithNumbers() throws {
@@ -406,6 +428,11 @@ final class PassCardTests: XCTestCase {
         try JSONDecoder().decode(RecognitionResult.self, from: Data(json.utf8))
     }
 
+    /// Whole-second on purpose: the `.iso8601` strategy truncates sub-second
+    /// precision, so a `Date()` default would make every round-trip comparison
+    /// fail for a reason that has nothing to do with the code under test.
+    private static let storedDate = Date(timeIntervalSince1970: 1_800_000_000)
+
     private func makePass(_ type: String, _ fieldsJSON: String) throws -> Pass {
         let json = """
         {
@@ -424,7 +451,10 @@ final class PassCardTests: XCTestCase {
         }
         """
         let result = try decode(json)
-        return Pass(type: result.type, fields: result.fields, imageSHA256: result.imageSha256)
+        return Pass(type: result.type,
+                    fields: result.fields,
+                    createdAt: Self.storedDate,
+                    imageSHA256: result.imageSha256)
     }
 
     /// High-entropy blocks, not flat colour: a flat PNG can compress below the
