@@ -110,7 +110,7 @@ final class PassStore: ObservableObject {
     }
 
     func deleteAllCompleted() {
-        passes.removeAll(\.isCompleted)
+        passes.removeAll(where: \.isCompleted)
         save()
     }
 
