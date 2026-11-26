@@ -49,6 +49,21 @@ final class PassCardTests: XCTestCase {
         XCTAssertNotNil(result.fields.date("depart_at"))
     }
 
+    /// Real Ark responses include `total_tokens` next to the parts; the
+    /// backend's own fake client does not. Both shapes must give one number,
+    /// otherwise the token cost shown for a recognition is wrong by 2x.
+    func testTotalTokensDoesNotDoubleCountTheReportedTotal() throws {
+        let reported = try decode(minimalResult(
+            tokens: #"{"completion_tokens":240,"prompt_tokens":1600,"total_tokens":1840}"#))
+        let partsOnly = try decode(minimalResult(
+            tokens: #"{"completion_tokens":240,"prompt_tokens":1600}"#))
+        let empty = try decode(minimalResult(tokens: "{}"))
+
+        XCTAssertEqual(reported.totalTokens, 1840)
+        XCTAssertEqual(partsOnly.totalTokens, 1840)
+        XCTAssertEqual(empty.totalTokens, 0)
+    }
+
     func testDecodesValidationFailurePayload() throws {
         let json = """
         {
@@ -432,6 +447,27 @@ final class PassCardTests: XCTestCase {
     /// precision, so a `Date()` default would make every round-trip comparison
     /// fail for a reason that has nothing to do with the code under test.
     private static let storedDate = Date(timeIntervalSince1970: 1_800_000_000)
+
+    /// A whole result envelope with only `tokens` varying, so token accounting
+    /// is tested against the shape the backend really sends.
+    private func minimalResult(tokens: String) -> String {
+        return """
+        {
+          "type": "train",
+          "type_label": "火车票",
+          "fields": {},
+          "errors": [],
+          "warnings": [],
+          "fallback_used": false,
+          "image_sha256": "a",
+          "model_calls": 1,
+          "tokens": \(tokens),
+          "elapsed_ms": 1,
+          "cache_hit": false,
+          "ok": true
+        }
+        """
+    }
 
     private func makePass(_ type: String, _ fieldsJSON: String) throws -> Pass {
         let json = """

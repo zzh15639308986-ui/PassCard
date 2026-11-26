@@ -31,7 +31,12 @@ struct RecognitionResult: Codable, Equatable {
         case ok
     }
 
-    var totalTokens: Int { tokens.values.reduce(0, +) }
+    /// Ark's `usage` object carries `total_tokens` next to its parts, and
+    /// `ark.py` passes every key through, so summing the dictionary would count
+    /// the total twice. Only fall back to the sum when it is absent.
+    var totalTokens: Int {
+        tokens["total_tokens"] ?? tokens.values.reduce(0, +)
+    }
 }
 
 enum RecognitionError: LocalizedError {
