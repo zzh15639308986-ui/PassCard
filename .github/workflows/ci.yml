@@ -202,11 +202,33 @@ jobs:
           echo "packing $APP"
           mkdir -p Payload
           cp -R "$APP" Payload/
+
+          # The Dynamic Island and the lock-screen card are drawn by the Widget
+          # Extension. An .ipa without it still installs and still launches, it
+          # just silently lacks the only thing anyone wants to look at, so fail
+          # here rather than ship it.
+          APPEX=$(find Payload/PassCard.app/PlugIns -maxdepth 1 -name "*.appex" 2>/dev/null | head -1)
+          if [ -z "$APPEX" ]; then
+            echo "no Widget Extension embedded under PlugIns/:" >&2
+            find Payload/PassCard.app -maxdepth 2 >&2
+            exit 1
+          fi
+          echo "embedded extension: $APPEX"
+
           # ditto rather than zip: it preserves the bundle's symlinks and
           # resource forks, which a plain zip flattens and iOS then rejects.
           ditto -c -k --sequesterRsrc --keepParent Payload PassCard-unsigned.ipa
           ls -lh PassCard-unsigned.ipa
           unzip -l PassCard-unsigned.ipa | head -20
+
+          # Job logs need auth to read, so the facts that decide whether this
+          # .ipa is worth sideloading go on the run summary instead.
+          {
+            echo "### PassCard-unsigned.ipa"
+            echo "- widget extension: \`$(basename "$APPEX")\`"
+            echo "- ipa size: $(stat -f%z PassCard-unsigned.ipa) bytes"
+            echo "- unsigned on purpose: re-sign it with a free Apple ID in Sideloadly/AltStore"
+          } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Upload the .ipa
         uses: actions/upload-artifact@v4
