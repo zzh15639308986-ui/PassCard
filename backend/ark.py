@@ -54,6 +54,26 @@ def encode_image(image_bytes, mime="image/jpeg"):
     return "data:%s;base64,%s" % (mime, base64.b64encode(image_bytes).decode())
 
 
+def load_env_file(path):
+    """KEY=VALUE per line, so the key can live in a file outside the repo.
+
+    Existing environment wins, so a real export beats the file and nothing here
+    can silently override a deliberate setting. Returns the keys it set.
+    """
+    loaded = []
+    with open(path, "r", encoding="utf-8-sig") as handle:
+        for line in handle:
+            line = line.strip()
+            if not line or line.startswith("#") or "=" not in line:
+                continue
+            key, value = line.split("=", 1)
+            key, value = key.strip(), value.strip().strip('"').strip("'")
+            if key and key not in os.environ:
+                os.environ[key] = value
+                loaded.append(key)
+    return loaded
+
+
 class ArkClient:
     def __init__(self, api_key=None, model=None, endpoint=None, timeout=45,
                  retries=2, backoff=1.5, thinking=None):

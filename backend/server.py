@@ -2,6 +2,10 @@
 
     py server.py                    # 127.0.0.1:8787, this machine only
     py server.py --host 0.0.0.0     # reachable from a phone on the same Wi-Fi
+    py server.py --host 0.0.0.0 --env-file "$HOME/ark.env"
+
+--env-file takes KEY=VALUE lines from a file kept outside the repository, so
+the Ark key never has to be exported by hand or pasted into a chat.
 """
 
 import argparse
@@ -13,7 +17,7 @@ import socket
 import sys
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
-from ark import ArkClient, ArkError
+from ark import ArkClient, ArkError, load_env_file
 from pipeline import RecognitionPipeline
 
 CACHE_DIR = os.environ.get("FLOATO_CACHE_DIR",
@@ -112,7 +116,19 @@ def main():
                              "phone on the same network reach it")
     parser.add_argument("--port", type=int,
                         default=int(os.environ.get("PORT", 8787)))
+    parser.add_argument("--env-file",
+                        help="KEY=VALUE file outside the repository holding "
+                             "ARK_API_KEY and ARK_MODEL; the environment wins")
     args = parser.parse_args()
+
+    if args.env_file:
+        try:
+            loaded = load_env_file(args.env_file)
+        except OSError as exc:
+            print("cannot read --env-file: %s" % exc, file=sys.stderr)
+            return 1
+        print("env-file provided: %s" % (", ".join(loaded) or "nothing new"),
+              flush=True)
 
     try:
         build_pipeline()

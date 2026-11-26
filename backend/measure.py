@@ -29,27 +29,10 @@ import sys
 import tempfile
 import time
 
-from ark import ArkClient, ArkError
+from ark import ArkClient, ArkError, load_env_file
 from pipeline import RecognitionPipeline
 
 SECRET_KEYS = ("ARK_API_KEY",)
-
-
-def load_env_file(path):
-    """KEY=VALUE per line. Existing environment wins, so a real export beats
-    the file and nothing here can silently override a deliberate setting."""
-    loaded = []
-    with open(path, "r", encoding="utf-8-sig") as handle:
-        for line in handle:
-            line = line.strip()
-            if not line or line.startswith("#") or "=" not in line:
-                continue
-            key, value = line.split("=", 1)
-            key, value = key.strip(), value.strip().strip('"').strip("'")
-            if key and key not in os.environ:
-                os.environ[key] = value
-                loaded.append(key)
-    return loaded
 
 
 def mime_for(path):
