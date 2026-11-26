@@ -1,9 +1,15 @@
-"""Minimal HTTP front end for the recognition pipeline. Stdlib only."""
+"""Minimal HTTP front end for the recognition pipeline. Stdlib only.
 
+    py server.py                    # 127.0.0.1:8787, this machine only
+    py server.py --host 0.0.0.0     # reachable from a phone on the same Wi-Fi
+"""
+
+import argparse
 import base64
 import binascii
 import json
 import os
+import socket
 import sys
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
@@ -81,15 +87,57 @@ class Handler(BaseHTTPRequestHandler):
         sys.stderr.write("[server] " + fmt % args + "\n")
 
 
+def lan_ipv4():
+    """The address a phone on the same Wi-Fi must dial.
+
+    connect() on a UDP socket sends no packets; it only makes the kernel pick
+    the source address it would use for that destination, which is the
+    interface facing the default route. gethostname() is not enough: on a
+    multi-homed machine it happily returns a virtual adapter's address.
+    """
+    probe = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    try:
+        probe.connect(("8.8.8.8", 53))
+        return probe.getsockname()[0]
+    except OSError:
+        return None
+    finally:
+        probe.close()
+
+
 def main():
-    port = int(os.environ.get("PORT", 8787))
+    parser = argparse.ArgumentParser(description="PassCard recognition backend")
+    parser.add_argument("--host", default=os.environ.get("HOST", "127.0.0.1"),
+                        help="127.0.0.1 keeps this machine-only; 0.0.0.0 lets a "
+                             "phone on the same network reach it")
+    parser.add_argument("--port", type=int,
+                        default=int(os.environ.get("PORT", 8787)))
+    args = parser.parse_args()
+
     try:
         build_pipeline()
     except ArkError as exc:
         print("startup failed: %s" % exc, file=sys.stderr)
         return 1
-    server = ThreadingHTTPServer(("127.0.0.1", port), Handler)
-    print("listening on http://127.0.0.1:%d  (POST /recognize, GET /healthz)" % port)
+    server = ThreadingHTTPServer((args.host, args.port), Handler)
+    # flush: stdout is block-buffered once redirected, so without this a
+    # nohup/log-file run shows no address at all until the server exits.
+    print("listening on http://%s:%d  (POST /recognize, GET /healthz)"
+          % (args.host, args.port), flush=True)
+
+    if args.host not in ("127.0.0.1", "localhost", "::1"):
+        lan = lan_ipv4()
+        if lan:
+            print("in the app, set the backend to:  http://%s:%d"
+                  % (lan, args.port), flush=True)
+        print("WARNING: this endpoint has no authentication, and every request")
+        print("spends your Ark quota. Only expose it on a network you trust,")
+        print("and stop the server when you are done.")
+        print("If the phone cannot connect, allow the port from an ADMIN prompt:")
+        print('  netsh advfirewall firewall add rule name="PassCard backend"'
+              " dir=in action=allow protocol=TCP localport=%d" % args.port,
+              flush=True)
+
     try:
         server.serve_forever()
     except KeyboardInterrupt:
