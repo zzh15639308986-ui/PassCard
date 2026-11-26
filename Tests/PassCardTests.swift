@@ -332,8 +332,8 @@ final class PassCardTests: XCTestCase {
     func testPassCodableRoundTrip() throws {
         let original = try makePass("flight", #"{"flight_no":"MU5137","depart_at":"2099-06-01T09:00:00"}"#)
 
-        let data = try PassStore.makeEncoder().encode(original)
-        let restored = try PassStore.makeDecoder().decode(Pass.self, from: data)
+        let data = try Pass.storeEncoder().encode(original)
+        let restored = try Pass.storeDecoder().decode(Pass.self, from: data)
 
         XCTAssertEqual(restored, original)
         XCTAssertEqual(restored.fields.text("flight_no"), "MU5137")
@@ -347,10 +347,10 @@ final class PassCardTests: XCTestCase {
             try makePass("train", #"{"train_no":"G1"}"#),
             try makePass("pickup_food", #"{"code":"A100"}"#),
         ]
-        let data = try PassStore.makeEncoder().encode(passes)
+        let data = try Pass.storeEncoder().encode(passes)
         XCTAssertTrue(String(decoding: data, as: UTF8.self).contains("createdAt"))
 
-        let restored = try PassStore.makeDecoder().decode([Pass].self, from: data)
+        let restored = try Pass.storeDecoder().decode([Pass].self, from: data)
         XCTAssertEqual(restored, passes)
         XCTAssertEqual(restored.map(\.type), [.train, .pickupFood])
     }
@@ -358,8 +358,8 @@ final class PassCardTests: XCTestCase {
     func testCompletedAtSurvivesARoundTrip() throws {
         var pass = try makePass("voucher", #"{"code":"V1"}"#)
         pass.markCompleted(at: Self.storedDate)
-        let data = try PassStore.makeEncoder().encode(pass)
-        let restored = try PassStore.makeDecoder().decode(Pass.self, from: data)
+        let data = try Pass.storeEncoder().encode(pass)
+        let restored = try Pass.storeDecoder().decode(Pass.self, from: data)
         XCTAssertEqual(restored.completedAt, Self.storedDate)
         XCTAssertTrue(restored.isCompleted)
         XCTAssertFalse(restored.isPinned)

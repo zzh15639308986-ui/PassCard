@@ -36,3 +36,24 @@ struct Pass: Identifiable, Codable, Equatable, Hashable {
         completedAt = nil
     }
 }
+
+/// Pass's on-disk format. The two strategies must agree: if they drift, the
+/// stored file becomes undecodable on the next launch and PassStore.load()
+/// reads that as corruption and throws every pass away.
+///
+/// Deliberately not on PassStore, which is @MainActor — the widget extension
+/// and the tests both need these without hopping to the main actor.
+extension Pass {
+    static func storeEncoder() -> JSONEncoder {
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
+        encoder.dateEncodingStrategy = .iso8601
+        return encoder
+    }
+
+    static func storeDecoder() -> JSONDecoder {
+        let decoder = JSONDecoder()
+        decoder.dateDecodingStrategy = .iso8601
+        return decoder
+    }
+}
