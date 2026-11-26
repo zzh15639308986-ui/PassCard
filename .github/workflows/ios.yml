@@ -1,0 +1,108 @@
+name: iOS CI
+
+# This workflow is the only compiler available: the project is authored on
+# Windows and never opened in Xcode. Any change here is a change to the build.
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ios-ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-and-test:
+    # macOS minutes are billed at 10x. On a private repo the free tier gives
+    # 2000 min/mo, i.e. roughly TWO of these runs. Keep this repo public.
+    runs-on: macos-15
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Report available Xcode versions
+        run: ls -d /Applications/Xcode*.app 2>/dev/null
+
+      - name: Select newest Xcode
+        run: |
+          XCODE=$(ls -d /Applications/Xcode*.app 2>/dev/null | sort -V | tail -1)
+          echo "Selecting $XCODE"
+          sudo xcode-select -s "$XCODE/Contents/Developer"
+          sudo xcodebuild -runFirstLaunch || true
+          xcodebuild -version
+          swift --version
+
+      - name: Pick an iPhone simulator
+        run: |
+          xcrun simctl list devices available | grep -i iphone || true
+          UDID=$(xcrun simctl list devices available -j \
+            | jq -r '[.devices | to_entries[].value[]
+                      | select(.isAvailable and (.name | test("iPhone")))]
+                     | first | .udid // empty')
+          if [ -z "$UDID" ]; then
+            # Fallback that needs no jq: the text listing puts the UDID in
+            # parentheses on the device's own line.
+            UDID=$(xcrun simctl list devices available \
+              | grep -i "iPhone" \
+              | grep -oE "\([0-9A-Fa-f-]{36}\)" \
+              | head -1 | tr -d "()")
+          fi
+          if [ -z "$UDID" ]; then
+            echo "No available iPhone simulator on this runner" >&2
+            exit 1
+          fi
+          echo "Using simulator $UDID"
+          echo "SIM_UDID=$UDID" >> "$GITHUB_ENV"
+
+      - name: Install XcodeGen
+        run: |
+          if ! command -v xcodegen >/dev/null 2>&1; then
+            brew install xcodegen
+          fi
+          xcodegen --version
+
+      - name: Generate Xcode project
+        run: |
+          xcodegen generate
+          ls -la
+          xcodebuild -project PassCard.xcodeproj -list
+
+      # Same concrete destination for build and test so the second step reuses
+      # the artifacts instead of recompiling for a different target.
+      - name: Build
+        run: |
+          set -o pipefail
+          xcodebuild build \
+            -project PassCard.xcodeproj \
+            -scheme PassCard \
+            -configuration Debug \
+            -destination "platform=iOS Simulator,id=$SIM_UDID" \
+            -derivedDataPath DerivedData \
+            CODE_SIGNING_ALLOWED=NO \
+            2>&1 | tee build.log
+
+      - name: Run unit tests
+        run: |
+          set -o pipefail
+          xcodebuild test \
+            -project PassCard.xcodeproj \
+            -scheme PassCard \
+            -configuration Debug \
+            -destination "platform=iOS Simulator,id=$SIM_UDID" \
+            -derivedDataPath DerivedData \
+            -resultBundlePath TestResults.xcresult \
+            CODE_SIGNING_ALLOWED=NO \
+            2>&1 | tee test.log
+
+      - name: Upload logs on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: xcode-logs
+          path: |
+            build.log
+            test.log
+            TestResults.xcresult
+          if-no-files-found: ignore
+          retention-days: 14

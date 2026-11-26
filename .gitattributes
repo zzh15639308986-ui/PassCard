@@ -1,0 +1,10 @@
+# Authored on Windows, compiled on a macOS runner. core.autocrlf is machine
+# config, so pin the line endings in the repo itself: a CRLF byte inside the
+# workflow's shell script becomes "$'\r': command not found" and costs a full
+# 10-minute macOS run to discover.
+* text=auto eol=lf
+
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.pdf binary

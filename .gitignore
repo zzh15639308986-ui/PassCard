@@ -1,0 +1,10 @@
+DerivedData/
+build/
+*.xcresult
+build.log
+test.log
+Generated/
+*.xcodeproj
+xcuserdata/
+*.xcuserstate
+.DS_Store
