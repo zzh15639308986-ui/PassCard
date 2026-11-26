@@ -1,26 +1,29 @@
 # PassCard（凭证卡）
 
-截图 → 多模态模型识别 → 锁屏 / 灵动岛卡片。iOS 客户端。
+截图 → 多模态模型识别 → 锁屏 / 灵动岛卡片。仓库根目录是 iOS 客户端，识别后端在
+`backend/`（纯 Python，只用标准库，没有第三方依赖）。
 
-## 这个仓库必须整体作为 git 仓库根目录
+## 仓库结构
 
-GitHub 只读取**仓库根目录**下的 `.github/workflows/`。如果你把上一级目录
-（同时包含 `floato-backend`）作为仓库根推上去，CI 不会运行，`xcodegen generate`
-也会在错误的目录里执行。
-
-```bash
-cd floato-ios
-git init && git add -A && git commit -m "PassCard iOS client"
-git remote add origin <你的仓库>
-git push -u origin main
+```
+project.yml  Sources/  Widget/  Tests/   iOS 客户端（工程由 XcodeGen 生成）
+.github/workflows/ci.yml                 两个 job：macOS 编译测试、ubuntu 后端测试
+backend/                                 识别后端 + 合成截图评测
 ```
 
-后端 `floato-backend` 放另一个仓库，或者放同一个仓库但把 workflow 移到根目录并
-加上 `working-directory: floato-ios`。
+GitHub 只读取**仓库根目录**下的 `.github/workflows/`，所以 workflow 留在根目录：
+iOS job 直接用仓库根，后端 job 用 `defaults.run.working-directory: backend`。
+`project.yml` 的 sources 是显式列出的（`Sources`、`Widget`、`Tests`），XcodeGen
+不会把 `backend/` 扫进工程。
 
-**仓库建议设为 public**：macOS 分钟数按 10 倍计费，私有仓库免费额度 2000 分钟/月
-只够跑大约两次 CI。公开仓库的 macOS 分钟数不限。仓库里没有密钥——模型密钥只存在
-后端的环境变量里。
+**仓库必须保持 public**：macOS 分钟数按 10 倍计费，私有仓库免费额度 2000 分钟/月
+只够跑大约两次 CI；公开仓库的 macOS 分钟数不限。
+
+仓库里没有密钥，也永远不要有：模型密钥放在仓库外的 `ark.env`（`measure.py
+--env-file` 读它，`server.py` 读环境变量）。真截图的评测结果
+（`backend/synthetic/report-real.json`、`truth-real.json`、`labels-real.json`）
+含乘车人姓名、手机尾号、订单号，已 gitignore。CI 里还有一步会检查这三个文件、
+任何 `.env`、以及密钥形状的字符串有没有被跟踪，防止公开仓库漏出去。
 
 ## 本地无法编译
 
@@ -44,13 +47,60 @@ Sources/App/                       @main、AppSettings
 Sources/Views/                     列表、行、设置
 Widget/                            Live Activity 的锁屏与灵动岛 UI（@main 扩展入口）
 Tests/                             与后端契约的单元测试
+backend/ark.py                     Ark chat/completions 客户端：重试、用量统计、thinking 开关
+backend/passes.py                  SPEC：9 种凭证类型和字段，Swift 侧必须对齐
+backend/prompts.py                 分类与逐类型抽取的提示词
+backend/pipeline.py                两级路由（分类 → 抽取 → 可选修复）+ SHA256 图片缓存
+backend/server.py                  本地 HTTP 服务，默认只绑 127.0.0.1:8787
+backend/measure.py                 批量评测：准确率 / 延迟 / token 成本
+backend/test_pipeline.py           30 个离线用例（假 client，不联网，不需要密钥）
+backend/synthetic/                 合成截图、真值、渲染脚本、字段级评分器、评测报告
 ```
+
+## 后端怎么测
+
+```bash
+cd backend
+py test_pipeline.py
+```
+
+30 个用例全走假 client，不联网、不需要密钥，退出码 0 才算过。CI 的
+`backend-tests` job 就是跑这个。
+
+要花 token 的真实评测（需要 `ARK_API_KEY` 和 `ARK_MODEL`）：
+
+```bash
+cd backend
+py measure.py synthetic/*.png --labels synthetic/labels.json \
+  --out synthetic/report.json --env-file ~/ark.env --no-think
+py synthetic/grade_fields.py synthetic/report.json
+```
+
+通配符只在 git-bash 里展开；PowerShell 得写全路径或先
+`(ls synthetic\*.png).FullName`。
+
+已提交的 `synthetic/report-lite-nothink.json` 和 `report-lite.json` 是同一批合成
+截图在 `doubao-seed-2-1-lite-260915` 上的两次原始运行：
+
+| | 类型识别 | 平均延迟 | p95 | 每张 token | 每张成本 |
+|---|---|---|---|---|---|
+| 关推理（`--no-think`） | 8/8 | 2.58 s | 3.07 s | 2841 | 0.0025 元 |
+| 开推理（模型默认） | 8/8 | 27.4 s | 85.0 s | 4821 | 0.0078 元 |
+
+价格按火山方舟官方文档：seed-2.1-lite 输入 0.8 元/百万 token、输出 2.7 元/百万
+token。Seed 2.1 默认开推理，而且把推理算进输出 token 计费，所以 `server.py`
+默认关推理。
+
+另外两张真截图（未入库，因为含个人信息）结果一致：类型 2/2、字段 11/11、
+3.2–3.9 秒、每张 0.0026 元。`grade_fields.py` 的严格字段口径在关推理那次是
+48/52，4 处差异全是写法（`浦东机场` vs `上海浦东`、`05` vs `05车`），人读是
+52/52。
 
 ## 跑起来
 
 1. 在电脑上启动后端（需要 `ARK_API_KEY` 和 `ARK_MODEL` 环境变量）：
    ```bash
-   cd ../floato-backend
+   cd backend
    python server.py        # 监听 127.0.0.1:8787
    ```
    `server.py` 默认只绑 `127.0.0.1`，手机连不上。改成 `0.0.0.0` 或在
@@ -76,6 +126,7 @@ Tests/                             与后端契约的单元测试
 
 ## 契约
 
-Swift 侧的类型标识符和字段名必须和 `../floato-backend/passes.py` 的 `SPEC` 一致。
+Swift 侧的类型标识符和字段名必须和 `backend/passes.py` 的 `SPEC` 一致。
 `Tests/PassCardTests.swift` 里的 JSON 字面量就是后端 `pipeline._finish` 的真实
-输出形状，改任何一边都要同时改另一边。
+输出形状，改任何一边都要同时改另一边。CI 的两个 job 分别守这两边，但它们不会
+互相检查一致性——改 `SPEC` 的时候记得同时改 Swift。

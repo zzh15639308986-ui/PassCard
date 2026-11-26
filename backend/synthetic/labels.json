@@ -1,0 +1,10 @@
+{
+  "train-g1234.png": "train",
+  "flight-mu5137.png": "flight",
+  "parcel-cainiao.png": "pickup_parcel",
+  "food-mcdonalds.png": "pickup_food",
+  "movie-interstellar.png": "movie",
+  "ride-didi.png": "ride",
+  "voucher-starbucks.png": "voucher",
+  "negative-weather.png": "unknown"
+}

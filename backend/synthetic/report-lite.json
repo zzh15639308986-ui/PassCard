@@ -1,0 +1,323 @@
+{
+  "results": [
+    {
+      "bytes": 74614,
+      "cache_hit": false,
+      "elapsed_ms": 42793,
+      "errors": [],
+      "expected": "flight",
+      "fields": {
+        "arrive_at": "2026-12-05T16:55:00",
+        "boarding_time": "2026-12-05T14:00:00",
+        "brand": "东方航空",
+        "depart_at": "2026-12-05T14:30:00",
+        "flight_no": "MU5137",
+        "from_airport": "上海浦东",
+        "gate": "27",
+        "passenger": "张伟",
+        "pnr": "HK3M9Q",
+        "seat": "32A",
+        "terminal_from": "T1",
+        "terminal_to": "T2",
+        "to_airport": "北京首都"
+      },
+      "file": "flight-mu5137.png",
+      "model_calls": 2,
+      "ok": true,
+      "path": "synthetic/flight-mu5137.png",
+      "tokens": {
+        "completion": 3853,
+        "prompt": 2960,
+        "total": 6813
+      },
+      "tokens_raw": {
+        "completion_tokens": 3853,
+        "prompt_tokens": 2960,
+        "total_tokens": 6813
+      },
+      "type": "flight",
+      "type_correct": true,
+      "type_label": "机票",
+      "wall_ms": 42913,
+      "warnings": []
+    },
+    {
+      "bytes": 40222,
+      "cache_hit": false,
+      "elapsed_ms": 13736,
+      "errors": [],
+      "expected": "pickup_food",
+      "fields": {
+        "brand": "麦当劳",
+        "code": "A207",
+        "notes": "状态：制作中",
+        "order_no": "M2026112600931",
+        "pickup_by": "2026-11-26T13:05:00",
+        "store": "麦当劳（合生汇店）"
+      },
+      "file": "food-mcdonalds.png",
+      "model_calls": 2,
+      "ok": true,
+      "path": "synthetic/food-mcdonalds.png",
+      "tokens": {
+        "completion": 1130,
+        "prompt": 2921,
+        "total": 4051
+      },
+      "tokens_raw": {
+        "completion_tokens": 1130,
+        "prompt_tokens": 2921,
+        "total_tokens": 4051
+      },
+      "type": "pickup_food",
+      "type_correct": true,
+      "type_label": "取餐码",
+      "wall_ms": 13740,
+      "warnings": []
+    },
+    {
+      "bytes": 69108,
+      "cache_hit": false,
+      "elapsed_ms": 84979,
+      "errors": [],
+      "expected": "movie",
+      "fields": {
+        "brand": "淘票票",
+        "cinema": "万达影城（五角场店）",
+        "duration_min": 169.0,
+        "language": "英语",
+        "screen": "5号厅",
+        "seat": "8排12座",
+        "start_at": "2026-11-29T19:40:00",
+        "title": "星际穿越",
+        "version": "IMAX 3D"
+      },
+      "file": "movie-interstellar.png",
+      "model_calls": 3,
+      "ok": true,
+      "path": "synthetic/movie-interstellar.png",
+      "tokens": {
+        "completion": 3758,
+        "prompt": 2935,
+        "total": 6693
+      },
+      "tokens_raw": {
+        "completion_tokens": 3758,
+        "prompt_tokens": 2935,
+        "total_tokens": 6693
+      },
+      "type": "movie",
+      "type_correct": true,
+      "type_label": "电影票",
+      "wall_ms": 84983,
+      "warnings": []
+    },
+    {
+      "bytes": 39124,
+      "cache_hit": false,
+      "elapsed_ms": 2433,
+      "errors": [],
+      "expected": "unknown",
+      "fields": {},
+      "file": "negative-weather.png",
+      "model_calls": 1,
+      "ok": true,
+      "path": "synthetic/negative-weather.png",
+      "tokens": {
+        "completion": 47,
+        "prompt": 1424,
+        "total": 1471
+      },
+      "tokens_raw": {
+        "completion_tokens": 47,
+        "prompt_tokens": 1424,
+        "total_tokens": 1471
+      },
+      "type": "unknown",
+      "type_correct": true,
+      "type_label": "未识别",
+      "wall_ms": 2440,
+      "warnings": []
+    },
+    {
+      "bytes": 45176,
+      "cache_hit": false,
+      "elapsed_ms": 15199,
+      "errors": [],
+      "expected": "pickup_parcel",
+      "fields": {
+        "brand": "菜鸟",
+        "carrier": "圆通速递",
+        "code": "8-3-2106",
+        "expires_at": "2026-11-29T21:00:00",
+        "notes": "运单号：YT7566901234567",
+        "recipient_phone_tail": "4521",
+        "station": "菜鸟驿站（政通路店）"
+      },
+      "file": "parcel-cainiao.png",
+      "model_calls": 2,
+      "ok": true,
+      "path": "synthetic/parcel-cainiao.png",
+      "tokens": {
+        "completion": 1662,
+        "prompt": 2929,
+        "total": 4591
+      },
+      "tokens_raw": {
+        "completion_tokens": 1662,
+        "prompt_tokens": 2929,
+        "total_tokens": 4591
+      },
+      "type": "pickup_parcel",
+      "type_correct": true,
+      "type_label": "快递取件码",
+      "wall_ms": 15204,
+      "warnings": []
+    },
+    {
+      "bytes": 45883,
+      "cache_hit": false,
+      "elapsed_ms": 17266,
+      "errors": [],
+      "expected": "ride",
+      "fields": {
+        "destination": "杨浦区政通路100号",
+        "driver_phone_tail": "6688",
+        "notes": "司机已接单，预计6分钟后到达上车点",
+        "pickup_point": "五角场地铁站3号口",
+        "plate_no": "沪A·8K293",
+        "platform": "滴滴出行",
+        "ride_at": "2026-11-26T18:20:00",
+        "vehicle": "大众朗逸",
+        "vehicle_color": "白色"
+      },
+      "file": "ride-didi.png",
+      "model_calls": 2,
+      "ok": true,
+      "path": "synthetic/ride-didi.png",
+      "tokens": {
+        "completion": 1740,
+        "prompt": 2940,
+        "total": 4680
+      },
+      "tokens_raw": {
+        "completion_tokens": 1740,
+        "prompt_tokens": 2940,
+        "total_tokens": 4680
+      },
+      "type": "ride",
+      "type_correct": true,
+      "type_label": "打车订单",
+      "wall_ms": 17269,
+      "warnings": []
+    },
+    {
+      "bytes": 66864,
+      "cache_hit": false,
+      "elapsed_ms": 27042,
+      "errors": [],
+      "expected": "train",
+      "fields": {
+        "arrive_at": "2026-12-03T13:02:00",
+        "brand": "铁路12306",
+        "carriage": "05车",
+        "depart_at": "2026-12-03T08:15:00",
+        "from_station": "北京南",
+        "gate": "12B",
+        "passenger": "张伟",
+        "seat": "12A号",
+        "seat_class": "二等座",
+        "to_station": "上海虹桥",
+        "train_no": "G1234"
+      },
+      "file": "train-g1234.png",
+      "model_calls": 2,
+      "ok": true,
+      "path": "synthetic/train-g1234.png",
+      "tokens": {
+        "completion": 2977,
+        "prompt": 2947,
+        "total": 5924
+      },
+      "tokens_raw": {
+        "completion_tokens": 2977,
+        "prompt_tokens": 2947,
+        "total_tokens": 5924
+      },
+      "type": "train",
+      "type_correct": true,
+      "type_label": "火车票",
+      "wall_ms": 27047,
+      "warnings": []
+    },
+    {
+      "bytes": 66574,
+      "cache_hit": false,
+      "elapsed_ms": 15902,
+      "errors": [],
+      "expected": "voucher",
+      "fields": {
+        "brand": "星巴克",
+        "code": "SBX-9F2K-77QD",
+        "expires_at": "2026-12-31T23:59:00",
+        "merchant": "星巴克",
+        "notes": "条形码编号：1234 5678 9012 3456",
+        "terms": "限中国大陆门店使用",
+        "value": "中杯拿铁兑换券"
+      },
+      "file": "voucher-starbucks.png",
+      "model_calls": 2,
+      "ok": true,
+      "path": "synthetic/voucher-starbucks.png",
+      "tokens": {
+        "completion": 1416,
+        "prompt": 2926,
+        "total": 4342
+      },
+      "tokens_raw": {
+        "completion_tokens": 1416,
+        "prompt_tokens": 2926,
+        "total_tokens": 4342
+      },
+      "type": "voucher",
+      "type_correct": true,
+      "type_label": "优惠券/兑换码",
+      "wall_ms": 15905,
+      "warnings": []
+    }
+  ],
+  "summary": {
+    "accuracy": {
+      "graded": 8,
+      "type_accuracy": 1.0,
+      "type_correct": 8
+    },
+    "cache_hits": 0,
+    "cost_cny": {
+      "per_image": 0.007795,
+      "price_in_per_million": 0.8,
+      "price_out_per_million": 2.7,
+      "total": 0.06236
+    },
+    "elapsed_ms": {
+      "max": 84979,
+      "mean": 27418,
+      "median": 16584,
+      "min": 2433,
+      "p95": 84979
+    },
+    "failed": 0,
+    "images_recognised": 8,
+    "images_requested": 8,
+    "measured_paid_calls": 8,
+    "model_calls_total": 16,
+    "reported_ok": 8,
+    "tokens": {
+      "completion_total": 16583,
+      "prompt_total": 21982,
+      "total": 38565,
+      "total_per_image": 4820.6
+    },
+    "wall_ms_mean": 27437
+  }
+}

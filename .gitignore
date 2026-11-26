@@ -8,3 +8,20 @@ Generated/
 xcuserdata/
 *.xcuserstate
 .DS_Store
+
+# Python backend
+__pycache__/
+*.pyc
+backend/.cache/
+backend/cache/
+backend/test-report.txt
+
+# Measurement output from real user screenshots: passenger name, phone tail and
+# order number. The synthetic fixtures and their reports are committed instead.
+backend/synthetic/report-real.json
+backend/synthetic/truth-real.json
+backend/synthetic/labels-real.json
+
+# A model API key must never be committed, wherever it gets dropped.
+.env
+*.env

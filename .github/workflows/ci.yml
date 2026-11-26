@@ -1,6 +1,6 @@
-name: iOS CI
+name: CI
 
-# This workflow is the only compiler available: the project is authored on
+# The macOS job is the only compiler available: the iOS project is authored on
 # Windows and never opened in Xcode. Any change here is a change to the build.
 on:
   push:
@@ -9,11 +9,11 @@ on:
   workflow_dispatch:
 
 concurrency:
-  group: ios-ci-${{ github.ref }}
+  group: ci-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
-  build-and-test:
+  ios-build-and-test:
     # macOS minutes are billed at 10x. On a private repo the free tier gives
     # 2000 min/mo, i.e. roughly TWO of these runs. Keep this repo public.
     runs-on: macos-15
@@ -106,3 +106,45 @@ jobs:
             TestResults.xcresult
           if-no-files-found: ignore
           retention-days: 14
+
+  backend-tests:
+    # The backend is stdlib-only Python, so it needs no macOS runner. Ubuntu
+    # minutes are cheap next to macos-15, which is billed at 10x.
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      # No ARK_API_KEY here on purpose: test_pipeline.py drives a fake client,
+      # and its config selftest asserts that a missing key is rejected.
+      - name: Run backend tests
+        run: |
+          python -m compileall -q .
+          python test_pipeline.py
+
+      # This repo is public. The real-screenshot measurement output carries a
+      # passenger name, a phone tail and an order number, and an Ark key is
+      # fatal if it ever lands in history, so both are checked on every push
+      # instead of being left to .gitignore alone.
+      - name: Check nothing secret or personal is tracked
+        working-directory: .
+        run: |
+          set -e
+          bad=$(git ls-files | grep -E '\.env$|report-real\.json|truth-real\.json|labels-real\.json' || true)
+          if [ -n "$bad" ]; then
+            echo "these must stay out of version control:" >&2
+            echo "$bad" >&2
+            exit 1
+          fi
+          if git grep -InE 'ark-[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-'; then
+            echo "an Ark API key is committed above; rotate it and purge history" >&2
+            exit 1
+          fi
+          echo "clean: no key file, no key-shaped string, no real-screenshot data"
