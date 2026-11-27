@@ -56,6 +56,8 @@ backend/server.py                  本地 HTTP 服务，默认只绑 127.0.0.1:8
 backend/measure.py                 批量评测：准确率 / 延迟 / token 成本
 backend/test_pipeline.py           30 个离线用例（假 client，不联网，不需要密钥）
 backend/synthetic/                 合成截图、真值、渲染脚本、字段级评分器、评测报告
+tools/render-appicon.ps1           App 图标生成脚本（GDI+ 画几何票卡，改数字重跑即可）
+Sources/Assets.xcassets/           AppIcon.appiconset：上面脚本产出的 1024 PNG
 ```
 
 ## 后端怎么测
@@ -164,7 +166,6 @@ CI 的 `sideload-ipa` job 产出一个**未签名**的 `.ipa`，用 Windows 上�
 
 - `project.yml` 里的 `com.example.*` Bundle ID 换成自己的。
 - 删掉 `NSAllowsArbitraryLoads`（局域网明文 HTTP 的临时开关，App Store 审核会问）。
-- 补 App 图标（目前没有 asset catalog，装到手机上是空白图标）。
 - 后端要有公网 HTTPS 地址，不能是局域网 IP。
 - 中国区上架需要 ICP 备案；涉及生成式 AI 可能还有额外备案要求。
 
