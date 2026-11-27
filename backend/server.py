@@ -19,6 +19,7 @@ import json
 import os
 import socket
 import sys
+import traceback
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 from ark import ArkClient, ArkError, load_env_file
@@ -50,6 +51,13 @@ class Handler(BaseHTTPRequestHandler):
             return True
         return self.headers.get("Authorization", "") == "Bearer " + AUTH_TOKEN
 
+    def _fail(self, exc):
+        # An uncaught exception kills the handler thread and the socket
+        # closes with no response at all; iOS renders that as "network
+        # connection lost" with nothing to diagnose. Always answer, always log.
+        traceback.print_exc()
+        return self._send(500, {"error": "internal: %s" % exc})
+
     def _send(self, code, payload):
         body = json.dumps(payload, ensure_ascii=False).encode("utf-8")
         self.send_response(code)
@@ -62,11 +70,14 @@ class Handler(BaseHTTPRequestHandler):
         if not self._authorized():
             return self._send(401, {"error": "missing or bad token"})
         if self.path == "/healthz":
-            pipeline = build_pipeline()
-            return self._send(200, {"ok": True,
-                                    "model": pipeline.client.model,
-                                    "endpoint": pipeline.client.endpoint,
-                                    "cache_dir": CACHE_DIR})
+            try:
+                pipeline = build_pipeline()
+                return self._send(200, {"ok": True,
+                                        "model": pipeline.client.model,
+                                        "endpoint": pipeline.client.endpoint,
+                                        "cache_dir": CACHE_DIR})
+            except Exception as exc:
+                return self._fail(exc)
         return self._send(404, {"error": "not found"})
 
     def do_POST(self):
@@ -99,6 +110,8 @@ class Handler(BaseHTTPRequestHandler):
             result = build_pipeline().recognize(image, mime)
         except ArkError as exc:
             return self._send(502, {"error": str(exc)})
+        except Exception as exc:
+            return self._fail(exc)
         return self._send(200 if result["ok"] else 422, result)
 
     def log_message(self, fmt, *args):
