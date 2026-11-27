@@ -215,6 +215,16 @@ jobs:
           fi
           echo "embedded extension: $APPEX"
 
+          # Same reasoning as the extension check: a missing app icon is
+          # invisible until someone sideloads a week later and stares at a
+          # white tile. Assets.car is the compiled catalog; no icon, no car.
+          if [ ! -f Payload/PassCard.app/Assets.car ]; then
+            echo "no compiled asset catalog in the app bundle:" >&2
+            find Payload/PassCard.app -maxdepth 1 >&2
+            exit 1
+          fi
+          echo "asset catalog: $(stat -f%z Payload/PassCard.app/Assets.car) bytes"
+
           # ditto rather than zip: it preserves the bundle's symlinks and
           # resource forks, which a plain zip flattens and iOS then rejects.
           ditto -c -k --sequesterRsrc --keepParent Payload PassCard-unsigned.ipa
@@ -226,6 +236,7 @@ jobs:
           {
             echo "### PassCard-unsigned.ipa"
             echo "- widget extension: \`$(basename "$APPEX")\`"
+            echo "- app icon: Assets.car, $(stat -f%z Payload/PassCard.app/Assets.car) bytes"
             echo "- ipa size: $(stat -f%z PassCard-unsigned.ipa) bytes"
             echo "- unsigned on purpose: re-sign it with a free Apple ID in Sideloadly/AltStore"
           } >> "$GITHUB_STEP_SUMMARY"
