@@ -4,6 +4,8 @@
 #       -Src <generated.png> -Out <AppIcon-1024.png> [-Preview <preview.png>]
 #
 # Three jobs, in order:
+#   0. Normalize to 1024x1024. The catalog slot is the iOS 17 single-size
+#      icon; generators drift (1254, 2048), so resize here.
 #   1. Flatten to opaque. App Store icon art must not carry an alpha channel,
 #      and a stray transparent pixel would show through as a hole on the
 #      home screen. Missing alpha is filled with the top-left background
@@ -13,6 +15,8 @@
 #      patched corner out of phase with the rest. Detect the vertical grid
 #      line period on a clean row and snap the copy shift to whole cells;
 #      same-row copying keeps the horizontal lines exact by construction.
+#      Pass -SkipPatch when the art carries no watermark: copying over clean
+#      art only risks transplanting whatever the source band happened to hold.
 #   3. Emit a 512/180/120/60 preview, because whether a cartoon face still
 #      reads at home-screen size cannot be judged from the 1024 original.
 #
@@ -22,23 +26,24 @@ param(
     [Parameter(Mandatory = $true)][string]$SrcPath,
     [Parameter(Mandatory = $true)][string]$Out,
     [string]$Preview,
-    [int]$PatchShift = 0
+    [int]$PatchShift = 0,
+    [switch]$SkipPatch
 )
 
 $ErrorActionPreference = 'Stop'
 Add-Type -AssemblyName System.Drawing
 
 $src = [System.Drawing.Image]::FromFile((Resolve-Path -LiteralPath $SrcPath).Path)
-$W = [int]$src.Width
-$H = [int]$src.Height
-if ($W -ne $H) { throw "icon art must be square, got ${W}x${H}" }
+if ($src.Width -ne $src.Height) { throw ("icon art must be square, got " + $src.Width + "x" + $src.Height) }
 
+$W = 1024
+$H = 1024
 $bmp = New-Object System.Drawing.Bitmap($W, $H)
 $g = [System.Drawing.Graphics]::FromImage($bmp)
 $g.SmoothingMode      = [System.Drawing.Drawing2D.SmoothingMode]::AntiAlias
 $g.InterpolationMode  = [System.Drawing.Drawing2D.InterpolationMode]::HighQualityBicubic
 $g.PixelOffsetMode    = [System.Drawing.Drawing2D.PixelOffsetMode]::HighQuality
-$backdrop = $bmp.GetPixel(0, 0)
+$backdrop = $src.GetPixel(0, 0)
 $g.Clear($backdrop)
 $g.DrawImage($src, 0, 0, $W, $H)
 $g.Dispose()
@@ -72,18 +77,22 @@ function Get-GridPeriod {
     return 0
 }
 
-$rx = [int]($W * 0.78)
-$ry = [int]($H * 0.90)
-$period = Get-GridPeriod -b $bmp -w $W -h $H
-$shift = [int]($W * 0.40)
-if ($period -ge 8) {
-    $shift = [int]([math]::Round(($W * 0.40) / $period)) * $period
-}
-if ($PatchShift -ge 1) { $shift = $PatchShift }
-Write-Output ("grid period " + $period + " px, watermark copy shift " + $shift + " px")
-for ($y = $ry; $y -lt $H; $y++) {
-    for ($x = $rx; $x -lt $W; $x++) {
-        $bmp.SetPixel($x, $y, $bmp.GetPixel($x - $shift, $y))
+if ($SkipPatch) {
+    Write-Output "watermark patch skipped"
+} else {
+    $rx = [int]($W * 0.78)
+    $ry = [int]($H * 0.90)
+    $period = Get-GridPeriod -b $bmp -w $W -h $H
+    $shift = [int]($W * 0.40)
+    if ($period -ge 8) {
+        $shift = [int]([math]::Round(($W * 0.40) / $period)) * $period
+    }
+    if ($PatchShift -ge 1) { $shift = $PatchShift }
+    Write-Output ("grid period " + $period + " px, watermark copy shift " + $shift + " px")
+    for ($y = $ry; $y -lt $H; $y++) {
+        for ($x = $rx; $x -lt $W; $x++) {
+            $bmp.SetPixel($x, $y, $bmp.GetPixel($x - $shift, $y))
+        }
     }
 }
 
