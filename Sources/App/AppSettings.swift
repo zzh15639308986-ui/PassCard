@@ -7,11 +7,21 @@ final class AppSettings {
 
     private let defaults = UserDefaults.standard
     private let serverURLKey = "server.baseURL"
+    private let serverTokenKey = "server.token"
 
     var serverURLString: String {
         get { defaults.string(forKey: serverURLKey) ?? "" }
         set { defaults.set(newValue.trimmingCharacters(in: .whitespacesAndNewlines),
                            forKey: serverURLKey) }
+    }
+
+    /// Sent as `Authorization: Bearer`. Empty means the backend runs
+    /// unauthenticated on a trusted LAN; a public backend sets PASSCARD_TOKEN
+    /// and this must match it.
+    var serverToken: String {
+        get { defaults.string(forKey: serverTokenKey) ?? "" }
+        set { defaults.set(newValue.trimmingCharacters(in: .whitespacesAndNewlines),
+                           forKey: serverTokenKey) }
     }
 
     var serverURL: URL? {

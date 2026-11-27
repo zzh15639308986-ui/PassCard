@@ -4,6 +4,7 @@ import SwiftUI
 struct SettingsView: View {
     @Environment(\.dismiss) private var dismiss
     @State private var serverText = AppSettings.shared.serverURLString
+    @State private var tokenText = AppSettings.shared.serverToken
     @State private var testState: TestState = .idle
 
     private enum TestState {
@@ -23,6 +24,14 @@ struct SettingsView: View {
                         .autocorrectionDisabled()
                         .onChange(of: serverText) { _, newValue in
                             AppSettings.shared.serverURLString = newValue
+                            if case .ok = testState { testState = .idle }
+                        }
+
+                    SecureField("访问令牌（后端没设就留空）", text: $tokenText)
+                        .textInputAutocapitalization(.never)
+                        .autocorrectionDisabled()
+                        .onChange(of: tokenText) { _, newValue in
+                            AppSettings.shared.serverToken = newValue
                             if case .ok = testState { testState = .idle }
                         }
 
@@ -93,7 +102,7 @@ struct SettingsView: View {
     private var statusFooter: some View {
         switch testState {
         case .idle:
-            Text("手机连不上电脑的 127.0.0.1，要填这台电脑在局域网里的 IP。手机和电脑必须在同一个 Wi-Fi。")
+            Text("填后端的地址：自己电脑上跑就填局域网 IP，云上部署就填 https 公网地址；令牌要和后端的 PASSCARD_TOKEN 一致，后端没设就留空。")
         case .testing:
             Text("正在连接…")
         case .ok(let model):
@@ -112,7 +121,8 @@ struct SettingsView: View {
         testState = .testing
         Task {
             do {
-                let model = try await RecognitionClient(baseURL: url, timeout: 15).checkHealth()
+                let model = try await RecognitionClient(baseURL: url, timeout: 15,
+                                                        token: AppSettings.shared.serverToken).checkHealth()
                 testState = .ok(model)
             } catch {
                 testState = .failed(error.localizedDescription)

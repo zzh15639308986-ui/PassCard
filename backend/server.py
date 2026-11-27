@@ -6,6 +6,10 @@
 
 --env-file takes KEY=VALUE lines from a file kept outside the repository, so
 the Ark key never has to be exported by hand or pasted into a chat.
+
+Set PASSCARD_TOKEN to require `Authorization: Bearer <token>` on every
+request. Without it the endpoint is open, which is acceptable on a
+trusted LAN and never acceptable on a public address.
 """
 
 import argparse
@@ -23,6 +27,7 @@ from pipeline import RecognitionPipeline
 CACHE_DIR = os.environ.get("FLOATO_CACHE_DIR",
                            os.path.join(os.path.dirname(__file__), ".cache"))
 PIPELINE = None
+AUTH_TOKEN = os.environ.get("PASSCARD_TOKEN", "")
 
 
 def build_pipeline():
@@ -40,6 +45,11 @@ def build_pipeline():
 class Handler(BaseHTTPRequestHandler):
     protocol_version = "HTTP/1.1"
 
+    def _authorized(self):
+        if not AUTH_TOKEN:
+            return True
+        return self.headers.get("Authorization", "") == "Bearer " + AUTH_TOKEN
+
     def _send(self, code, payload):
         body = json.dumps(payload, ensure_ascii=False).encode("utf-8")
         self.send_response(code)
@@ -49,6 +59,8 @@ class Handler(BaseHTTPRequestHandler):
         self.wfile.write(body)
 
     def do_GET(self):
+        if not self._authorized():
+            return self._send(401, {"error": "missing or bad token"})
         if self.path == "/healthz":
             pipeline = build_pipeline()
             return self._send(200, {"ok": True,
@@ -58,6 +70,8 @@ class Handler(BaseHTTPRequestHandler):
         return self._send(404, {"error": "not found"})
 
     def do_POST(self):
+        if not self._authorized():
+            return self._send(401, {"error": "missing or bad token"})
         if self.path != "/recognize":
             return self._send(404, {"error": "not found"})
         try:
@@ -141,14 +155,17 @@ def main():
     print("listening on http://%s:%d  (POST /recognize, GET /healthz)"
           % (args.host, args.port), flush=True)
 
+    if AUTH_TOKEN:
+        print("token auth enabled (PASSCARD_TOKEN)", flush=True)
     if args.host not in ("127.0.0.1", "localhost", "::1"):
         lan = lan_ipv4()
         if lan:
             print("in the app, set the backend to:  http://%s:%d"
                   % (lan, args.port), flush=True)
-        print("WARNING: this endpoint has no authentication, and every request")
-        print("spends your Ark quota. Only expose it on a network you trust,")
-        print("and stop the server when you are done.")
+        if not AUTH_TOKEN:
+            print("WARNING: this endpoint has no authentication, and every request")
+            print("spends your Ark quota. Only expose it on a network you trust,")
+            print("and stop the server when you are done.")
         print("If the phone cannot connect, allow the port from an ADMIN prompt:")
         print('  netsh advfirewall firewall add rule name="PassCard backend"'
               " dir=in action=allow protocol=TCP localport=%d" % args.port,

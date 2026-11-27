@@ -61,20 +61,22 @@ enum RecognitionError: LocalizedError {
 
 struct RecognitionClient {
     let baseURL: URL
+    let token: String
     /// Two model calls plus a possible repair round; the upstream model is the
     /// slow part, not the network.
     var timeout: TimeInterval = 90
 
-    init(baseURL: URL, timeout: TimeInterval = 90) {
+    init(baseURL: URL, timeout: TimeInterval = 90, token: String = "") {
         self.baseURL = baseURL
         self.timeout = timeout
+        self.token = token
     }
 
     static func current() throws -> RecognitionClient {
         guard let url = AppSettings.shared.serverURL else {
             throw RecognitionError.serverNotSet
         }
-        return RecognitionClient(baseURL: url)
+        return RecognitionClient(baseURL: url, token: AppSettings.shared.serverToken)
     }
 
     func recognize(_ image: PreparedImage) async throws -> RecognitionResult {
@@ -136,6 +138,9 @@ struct RecognitionClient {
     private func makeRequest(path: String, configure: (inout URLRequest) -> Void) -> URLRequest {
         let url = baseURL.appendingPathComponent(path)
         var request = URLRequest(url: url, timeoutInterval: timeout)
+        if !token.isEmpty {
+            request.setValue("Bearer " + token, forHTTPHeaderField: "Authorization")
+        }
         configure(&request)
         return request
     }
