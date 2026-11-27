@@ -33,7 +33,7 @@ targets:
     info:
       path: Generated/Info-App.plist
       properties:
-        CFBundleDisplayName: 凭证卡
+        CFBundleDisplayName: 喵卡
         NSSupportsLiveActivities: true
         NSSupportsLiveActivitiesFrequentUpdates: true
         UILaunchScreen: {}
@@ -66,7 +66,7 @@ targets:
     info:
       path: Generated/Info-Widget.plist
       properties:
-        CFBundleDisplayName: 凭证卡
+        CFBundleDisplayName: 喵卡
         NSExtension:
           NSExtensionPointIdentifier: com.apple.widgetkit-extension
 

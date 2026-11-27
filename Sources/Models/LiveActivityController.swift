@@ -68,7 +68,7 @@ enum LiveActivityError: LocalizedError {
     var errorDescription: String? {
         switch self {
         case .disabled:
-            return "系统里关掉了实时活动。到「设置 → 凭证卡 → 实时活动」打开后再试。"
+            return "系统里关掉了实时活动。到「设置 → 喵卡 → 实时活动」打开后再试。"
         case .tooMany:
             return "锁屏上已经有 5 张卡片了。先取消一张再固定新的。"
         }

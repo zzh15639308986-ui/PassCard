@@ -28,7 +28,9 @@ $ErrorActionPreference = 'Stop'
 Add-Type -AssemblyName System.Drawing
 
 if (-not $Out) {
-    $Out = Join-Path $Repo 'Sources\Assets.xcassets\AppIcon.appiconset\AppIcon-1024.png'
+    # Never default to the shipped catalog asset: the illustrated icon lives
+    # there now, and re-running this geometric renderer must not clobber it.
+    $Out = Join-Path $PSScriptRoot 'icon-geometric-1024.png'
 }
 if (-not $Preview) {
     $Preview = Join-Path $PSScriptRoot 'icon-preview.png'

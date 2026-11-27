@@ -56,7 +56,7 @@ struct SettingsView: View {
                         }
                     }
                     if !LiveActivityController.isSupported {
-                        Text("到「设置 → 凭证卡 → 实时活动」打开，否则固定到锁屏不会生效。")
+                        Text("到「设置 → 喵卡 → 实时活动」打开，否则固定到锁屏不会生效。")
                             .font(.footnote)
                             .foregroundStyle(.secondary)
                     }
