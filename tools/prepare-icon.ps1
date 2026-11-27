@@ -21,7 +21,8 @@
 param(
     [Parameter(Mandatory = $true)][string]$SrcPath,
     [Parameter(Mandatory = $true)][string]$Out,
-    [string]$Preview
+    [string]$Preview,
+    [int]$PatchShift = 0
 )
 
 $ErrorActionPreference = 'Stop'
@@ -78,6 +79,7 @@ $shift = [int]($W * 0.40)
 if ($period -ge 8) {
     $shift = [int]([math]::Round(($W * 0.40) / $period)) * $period
 }
+if ($PatchShift -ge 1) { $shift = $PatchShift }
 Write-Output ("grid period " + $period + " px, watermark copy shift " + $shift + " px")
 for ($y = $ry; $y -lt $H; $y++) {
     for ($x = $rx; $x -lt $W; $x++) {
